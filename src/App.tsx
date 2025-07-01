@@ -26,6 +26,9 @@ function App() {
           <Route path="dashboard" element={<Dashboard />} />     {/* /admin/dashboard */}
           {/* More admin routes would go here */}
         </Route>
+        
+        {/* 🏗️ Catch-all route for 404 Not Found */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   )
