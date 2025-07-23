@@ -7,6 +7,7 @@ import Dashboard from './admin/pages/Dashboard'
 import NotFound from './pages/NotFound'
 import Home from './pages/Home'
 import About from './pages/About'
+import Login from './pages/Login'
 
 // Lazy load pages for better performance
 
@@ -19,6 +20,7 @@ function App() {
           <Route index element={<Home />} />           {/* / */}
           <Route path="services" element={<Services />} />  {/* /services */}
           <Route path="about" element={<About />} />         {/* /about */}
+          <Route path="login" element={<Login />} />         {/* /login */}
         </Route>
         
         {/* 🏗️ Admin pages use DashboardLayout */}
