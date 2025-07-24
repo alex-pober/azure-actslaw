@@ -1,4 +1,4 @@
-import { useIsAuthenticated, useMsal } from '@azure/msal-react';
+import { useIsAuthenticated } from '@azure/msal-react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
 
