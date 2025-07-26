@@ -1,27 +1,57 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Scale, Home as HomeIcon, Users } from 'lucide-react'
+
 export default function Home() {
     return (
       <div className="max-w-7xl mx-auto py-12 px-4">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-6">
+          <h1 className="text-4xl font-bold mb-6">
             Welcome to ACTS Law Firm
           </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+          <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
             Providing exceptional legal services with integrity, expertise, and dedication. 
             Your trusted partner in navigating complex legal matters.
           </p>
           <div className="grid md:grid-cols-3 gap-8 mt-12">
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-xl font-semibold mb-3">⚖️ Corporate Law</h3>
-              <p className="text-gray-600">Expert guidance for business legal matters</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-xl font-semibold mb-3">🏠 Real Estate</h3>
-              <p className="text-gray-600">Complete property transaction support</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-xl font-semibold mb-3">👨‍👩‍👧‍👦 Family Law</h3>
-              <p className="text-gray-600">Compassionate family legal services</p>
-            </div>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center space-x-2">
+                  <Scale className="h-5 w-5 text-primary" />
+                  <CardTitle>Corporate Law</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>Expert guidance for business legal matters</CardDescription>
+                <Badge variant="secondary" className="mt-2">Professional</Badge>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <div className="flex items-center space-x-2">
+                  <HomeIcon className="h-5 w-5 text-primary" />
+                  <CardTitle>Real Estate</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>Complete property transaction support</CardDescription>
+                <Badge variant="secondary" className="mt-2">Residential</Badge>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <div className="flex items-center space-x-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  <CardTitle>Family Law</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>Compassionate family legal services</CardDescription>
+                <Badge variant="secondary" className="mt-2">Personal</Badge>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
