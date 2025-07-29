@@ -5,6 +5,7 @@ import NotFound from './pages/NotFound'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import CaseDetails from './pages/CaseDetails'
+import CaseChat from './pages/CaseChat'
 import AuthenticationGuard from './components/AuthenticationGuard'
 import { SmartAdvocateProvider } from './contexts/SmartAdvocateContext'
 import { CaseProvider } from './contexts/CaseContext'
@@ -26,6 +27,7 @@ function App() {
             <Route path="/" element={<AuthenticationGuard><MainLayout /></AuthenticationGuard>}>
               <Route path="home" element={<Home />} />           {/* /home */}
               <Route path="case/:caseId" element={<CaseDetails />} />  {/* /case/{caseId} */}
+              <Route path="case/:caseId/chat" element={<CaseChat />} />  {/* /case/{caseId}/chat */}
             </Route>
             
             {/* 🏗️ Catch-all route for 404 Not Found */}

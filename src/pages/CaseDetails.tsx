@@ -3,15 +3,17 @@ import { useParams, useNavigate } from 'react-router';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, MapPin, Building2, FileText, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Building2, FileText, AlertCircle, Loader2, MessageSquare } from 'lucide-react';
 import { useCaseContext, type CaseInfo } from '@/contexts/CaseContext';
 import { useSmartAdvocate } from '@/contexts/SmartAdvocateContext';
+import { getCaseById, TokenExpiredError } from '@/utils/smartAdvocateApi';
+import DocumentSyncStatus from '@/components/DocumentSyncStatus';
 
 export default function CaseDetails() {
   const { caseId } = useParams<{ caseId: string }>();
   const navigate = useNavigate();
   const { selectedCase, selectCase, isSearching } = useCaseContext();
-  const { bearerToken, isConnected } = useSmartAdvocate();
+  const { bearerToken, isConnected, handleTokenExpired } = useSmartAdvocate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,28 +34,18 @@ export default function CaseDetails() {
     setError(null);
 
     try {
-      const apiUrl = import.meta.env.VITE_SMARTADVOCATE_API_URL || 'https://sa.actslaw.com/CaseSyncAPI';
-      const response = await fetch(`${apiUrl}/case/${encodeURIComponent(id)}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${bearerToken}`,
-          'Content-Type': 'application/json',
-        },
+      const caseData: CaseInfo = await getCaseById(id, {
+        bearerToken: bearerToken!,
+        onTokenExpired: handleTokenExpired,
       });
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          setError(`Case with ID ${id} not found`);
-          return;
-        }
-        throw new Error(`Failed to fetch case: ${response.statusText}`);
-      }
-
-      const caseData: CaseInfo = await response.json();
       selectCase(caseData);
     } catch (err) {
       console.error('Error fetching case:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch case details');
+      if (err instanceof TokenExpiredError) {
+        setError('Your SmartAdvocate session has expired. Please sign in again.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to fetch case details');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -175,74 +167,16 @@ export default function CaseDetails() {
               </div>
             </div>
           </div>
+          
+          {/* Chat Button */}
+          <Button 
+            onClick={() => navigate(`/case/${selectedCase.caseID}/chat`)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Chat with AI
+          </Button>
         </div>
-      </div>
-
-      {/* Case Information Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {/* Basic Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <FileText className="h-5 w-5" />
-              <span>Case Information</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-slate-600">Case Type</label>
-              <p className="text-slate-900">{selectedCase.caseType}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-slate-600">Case Group</label>
-              <p className="text-slate-900">{selectedCase.caseGroup}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-slate-600">Status From</label>
-              <p className="text-slate-900">{formatDate(selectedCase.caseStatusFrom)}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-slate-600">Office</label>
-              <p className="text-slate-900">{selectedCase.officeName}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Incident Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <MapPin className="h-5 w-5" />
-              <span>Incident Details</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-slate-600">Incident Date</label>
-              <p className="text-slate-900">{formatDate(selectedCase.incident.incidentDate)}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-slate-600">State</label>
-              <p className="text-slate-900">{selectedCase.incident.state || 'N/A'}</p>
-            </div>
-            {selectedCase.incident.incidentFacts && (
-              <div>
-                <label className="text-sm font-medium text-slate-600">Incident Facts</label>
-                <p className="text-slate-900 text-sm leading-relaxed">
-                  {selectedCase.incident.incidentFacts}
-                </p>
-              </div>
-            )}
-            {selectedCase.incident.comments && (
-              <div>
-                <label className="text-sm font-medium text-slate-600">Comments</label>
-                <p className="text-slate-900 text-sm leading-relaxed">
-                  {selectedCase.incident.comments}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* Additional Details */}
@@ -256,6 +190,9 @@ export default function CaseDetails() {
           </CardContent>
         </Card>
       )}
+
+      {/* Document Sync Status */}
+      <DocumentSyncStatus caseId={selectedCase.caseID.toString()} caseNumber={selectedCase.caseNumber} />
     </div>
   );
 }

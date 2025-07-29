@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { Search, X, FileText, Loader2 } from 'lucide-react';
-import { useCaseContext } from '@/contexts/CaseContext';
+import { useCaseContext, type CaseInfo } from '@/contexts/CaseContext';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useSmartAdvocate } from '@/contexts/SmartAdvocateContext';
 
 interface SmartAdvocateSearchProps {
   bearerToken: string;
@@ -13,6 +14,7 @@ export default function SmartAdvocateSearch({ bearerToken }: SmartAdvocateSearch
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { handleTokenExpired } = useSmartAdvocate();
   
   const { selectedCase, searchResults, isSearching, searchCase, selectCase, clearCase, clearSearchResults } = useCaseContext();
   
@@ -22,13 +24,13 @@ export default function SmartAdvocateSearch({ bearerToken }: SmartAdvocateSearch
   // Perform search when debounced term changes
   useEffect(() => {
     if (debouncedSearchTerm && !selectedCase) {
-      searchCase(debouncedSearchTerm, bearerToken);
+      searchCase(debouncedSearchTerm, bearerToken, handleTokenExpired);
       setIsDropdownOpen(true);
     } else if (!debouncedSearchTerm) {
       clearSearchResults();
       setIsDropdownOpen(false);
     }
-  }, [debouncedSearchTerm, bearerToken, searchCase, clearSearchResults, selectedCase]);
+  }, [debouncedSearchTerm, bearerToken, searchCase, clearSearchResults, selectedCase, handleTokenExpired]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -42,7 +44,7 @@ export default function SmartAdvocateSearch({ bearerToken }: SmartAdvocateSearch
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleCaseSelect = (caseInfo: any) => {
+  const handleCaseSelect = (caseInfo: CaseInfo) => {
     selectCase(caseInfo);
     setSearchTerm('');
     setIsDropdownOpen(false);

@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router'
 import { useIsAuthenticated } from '@azure/msal-react'
 import UserProfile from '../components/UserProfile'
 import SmartAdvocateSearch from '../components/SmartAdvocateSearch'
+import TokenExpiredAlert from '../components/TokenExpiredAlert'
 import { useSmartAdvocate } from '../contexts/SmartAdvocateContext'
 
 export default function MainLayout() {
@@ -65,6 +66,9 @@ export default function MainLayout() {
       <main className="flex-1">
         <Outlet />
       </main>
+
+      {/* Token Expired Alert */}
+      <TokenExpiredAlert />
 
       {/* 🔻 MODERN FOOTER */}
       {/* <footer className="bg-white border-t border-slate-200">

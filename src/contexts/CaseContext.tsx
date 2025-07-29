@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
+import { searchCases, TokenExpiredError } from '../utils/smartAdvocateApi';
 
 export interface CaseIncident {
   incidentDate: string;
@@ -30,7 +31,7 @@ interface CaseContextType {
   selectedCase: CaseInfo | null;
   searchResults: CaseInfo[];
   isSearching: boolean;
-  searchCase: (caseNumber: string, bearerToken: string) => Promise<void>;
+  searchCase: (caseNumber: string, bearerToken: string, onTokenExpired?: () => void) => Promise<void>;
   selectCase: (caseInfo: CaseInfo) => void;
   clearCase: () => void;
   clearSearchResults: () => void;
@@ -55,29 +56,24 @@ export function CaseProvider({ children }: CaseProviderProps) {
   const [searchResults, setSearchResults] = useState<CaseInfo[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  const searchCase = useCallback(async (caseNumber: string, bearerToken: string) => {
+  const searchCase = useCallback(async (caseNumber: string, bearerToken: string, onTokenExpired?: () => void) => {
     if (!caseNumber.trim() || !bearerToken) return;
 
     setIsSearching(true);
     try {
-      const apiUrl = import.meta.env.VITE_SMARTADVOCATE_API_URL || 'https://sa.actslaw.com/CaseSyncAPI';
-      const response = await fetch(`${apiUrl}/case/CaseInfo?Casenumber=${encodeURIComponent(caseNumber)}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${bearerToken}`,
-          'Content-Type': 'application/json',
-        },
+      const cases: CaseInfo[] = await searchCases(caseNumber, {
+        bearerToken,
+        onTokenExpired,
       });
-
-      if (!response.ok) {
-        throw new Error(`Search failed: ${response.statusText}`);
-      }
-
-      const cases: CaseInfo[] = await response.json();
       setSearchResults(cases);
     } catch (error) {
       console.error('Error searching cases:', error);
-      setSearchResults([]);
+      if (error instanceof TokenExpiredError) {
+        // Don't set search results if token expired
+        setSearchResults([]);
+      } else {
+        setSearchResults([]);
+      }
     } finally {
       setIsSearching(false);
     }

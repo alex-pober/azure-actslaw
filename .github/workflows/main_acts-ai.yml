@@ -23,17 +23,33 @@ jobs:
         with:
           node-version: '22.x'
 
-      - name: npm install, build, and test
+      # Build frontend
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build frontend
+        run: npm run build
+
+      # Build server
+      - name: Install server dependencies
         run: |
+          cd server
           npm install
-          npm run build
-          npm run test --if-present
+
+      # Create deployment package
+      - name: Prepare deployment package
+        run: |
+          mkdir deployment-package
+          cp -r dist deployment-package/
+          cp -r server deployment-package/
+          cp package.json deployment-package/
+          echo 'web: cd server && npm start' > deployment-package/Procfile
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: dist
+          path: deployment-package
 
   deploy:
     runs-on: ubuntu-latest
