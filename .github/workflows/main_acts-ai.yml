@@ -43,7 +43,6 @@ jobs:
           cp -r dist deployment-package/
           cp -r server deployment-package/
           cp package.json deployment-package/
-          echo 'web: cd server && npm start' > deployment-package/Procfile
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
