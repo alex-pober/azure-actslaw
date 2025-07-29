@@ -20,7 +20,7 @@ app.use(cors());
 app.use(express.json());
 
 // Serve static files from public directory (React build)
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'dist')));
 
 // Azure configuration
 const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
