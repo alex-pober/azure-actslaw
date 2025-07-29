@@ -40,9 +40,49 @@ jobs:
       - name: Prepare deployment package
         run: |
           mkdir deployment-package
-          cp -r dist deployment-package/
-          cp -r server deployment-package/
-          cp package.json deployment-package/
+          
+          # Copy server files and make it the main app
+          cp -r server/* deployment-package/
+          
+          # Copy built frontend to public directory in server
+          mkdir -p deployment-package/public
+          cp -r dist/* deployment-package/public/
+          
+          # Create web.config for Azure App Service
+          cat > deployment-package/web.config << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <system.webServer>
+              <handlers>
+                <add name="iisnode" path="server.js" verb="*" modules="iisnode"/>
+              </handlers>
+              <rewrite>
+                <rules>
+                  <rule name="NodeInspector" patternSyntax="ECMAScript" stopProcessing="true">
+                    <match url="^server.js\/debug[\/]?" />
+                  </rule>
+                  <rule name="StaticContent">
+                    <action type="Rewrite" url="public{REQUEST_URI}"/>
+                  </rule>
+                  <rule name="DynamicContent">
+                    <conditions>
+                      <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="True"/>
+                    </conditions>
+                    <action type="Rewrite" url="server.js"/>
+                  </rule>
+                </rules>
+              </rewrite>
+              <security>
+                <requestFiltering>
+                  <hiddenSegments>
+                    <remove segment="bin"/>
+                  </hiddenSegments>
+                </requestFiltering>
+              </security>
+              <httpErrors existingResponse="PassThrough" />
+            </system.webServer>
+          </configuration>
+          EOF
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4

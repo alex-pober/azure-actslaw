@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { AzureOpenAI } from 'openai';
 import { SearchClient, SearchIndexClient } from '@azure/search-documents';
 import { AzureKeyCredential } from '@azure/core-auth';
@@ -7,12 +9,18 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve static files from public directory (React build)
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Azure configuration
 const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
@@ -274,6 +282,11 @@ app.get('/api/test-connection', async (req, res) => {
       error: error.message
     });
   }
+});
+
+// Serve React app for all non-API routes (client-side routing)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {
