@@ -134,6 +134,5 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'ACTS-AI-BACKEND'
-          slot-name: 'Production'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_BACKEND }}
           package: .
