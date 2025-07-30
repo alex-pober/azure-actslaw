@@ -13,14 +13,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 8080;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from public directory (React build)
-app.use(express.static(path.join(__dirname, 'public')));
+// Backend API only - no static file serving
 
 // Azure configuration
 const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
@@ -284,10 +283,7 @@ app.get('/api/test-connection', async (req, res) => {
   }
 });
 
-// Serve React app for all non-API routes (client-side routing)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// API-only backend - no catch-all route needed
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
