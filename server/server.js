@@ -3,6 +3,8 @@ import cors from 'cors';
 import { AzureOpenAI } from 'openai';
 import { SearchClient, SearchIndexClient } from '@azure/search-documents';
 import { AzureKeyCredential } from '@azure/core-auth';
+import { expressjwt as jwt } from 'express-jwt';
+import jwksRsa from 'jwks-rsa';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -11,7 +13,10 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: FRONTEND_URL,
+  credentials: true
+}));
 app.use(express.json());
 
 // Backend API only - no static file serving
@@ -24,6 +29,15 @@ const AZURE_AI_SEARCH_ENDPOINT = process.env.AZURE_AI_SEARCH_ENDPOINT;
 const AZURE_AI_SEARCH_API_KEY = process.env.AZURE_AI_SEARCH_API_KEY;
 const AZURE_AI_SEARCH_INDEX = process.env.AZURE_AI_SEARCH_INDEX;
 
+// Azure AD configuration for JWT validation
+const AZURE_TENANT_ID = process.env.AZURE_TENANT_ID;
+const BACKEND_CLIENT_ID = process.env.BACKEND_CLIENT_ID;
+const FRONTEND_CLIENT_ID = process.env.FRONTEND_CLIENT_ID;
+
+// Server configuration
+const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
 // Validate configuration
 if (!AZURE_OPENAI_ENDPOINT || !AZURE_OPENAI_API_KEY || !AZURE_OPENAI_DEPLOYMENT_ID) {
   console.error("Please set the required Azure OpenAI environment variables");
@@ -32,6 +46,11 @@ if (!AZURE_OPENAI_ENDPOINT || !AZURE_OPENAI_API_KEY || !AZURE_OPENAI_DEPLOYMENT_
 
 if (!AZURE_AI_SEARCH_ENDPOINT || !AZURE_AI_SEARCH_API_KEY || !AZURE_AI_SEARCH_INDEX) {
   console.warn('Azure AI Search is not fully configured. RAG functionality will be limited.');
+}
+
+if (!AZURE_TENANT_ID || !BACKEND_CLIENT_ID || !FRONTEND_CLIENT_ID) {
+  console.error("Please set the required Azure AD environment variables for JWT validation");
+  process.exit(1);
 }
 
 // Initialize clients
@@ -75,6 +94,44 @@ if (AZURE_AI_SEARCH_ENDPOINT && AZURE_AI_SEARCH_API_KEY && AZURE_AI_SEARCH_INDEX
     console.error('Failed to initialize search client:', error.message);
   }
 }
+
+// JWT middleware configuration
+const jwtMiddleware = jwt({
+  secret: jwksRsa.expressJwtSecret({
+    cache: true,
+    rateLimit: true,
+    jwksRequestsPerMinute: 5,
+    jwksUri: `https://login.microsoftonline.com/${AZURE_TENANT_ID}/discovery/v2.0/keys`
+  }),
+  audience: `api://${BACKEND_CLIENT_ID}`,
+  issuer: `https://login.microsoftonline.com/${AZURE_TENANT_ID}/v2.0`,
+  algorithms: ['RS256']
+});
+
+// Custom middleware to validate the frontend client ID
+const validateFrontendClient = (req, res, next) => {
+  try {
+    const token = req.auth;
+
+    // Check if the token contains the authorized party (azp) or appid that matches the frontend
+    const authorizedParty = token.azp || token.appid;
+
+    if (authorizedParty !== FRONTEND_CLIENT_ID) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Invalid client application'
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Frontend client validation error:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'Token validation failed'
+    });
+  }
+};
 
 // Simple RAG query function - let the index return what it finds
 async function queryAISearchForSources(query) {
@@ -184,8 +241,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Chat completion endpoint with RAG
-app.post('/api/chat/completions', async (req, res) => {
+// Chat completion endpoint with RAG (protected)
+app.post('/api/chat/completions', jwtMiddleware, validateFrontendClient, async (req, res) => {
   try {
     const { messages, caseNumber } = req.body;
 
@@ -251,8 +308,8 @@ app.post('/api/chat/completions', async (req, res) => {
   }
 });
 
-// Test connection endpoint
-app.get('/api/test-connection', async (req, res) => {
+// Test connection endpoint (protected)
+app.get('/api/test-connection', jwtMiddleware, validateFrontendClient, async (req, res) => {
   try {
     const testMessages = [
       { role: 'user', content: 'Hello, can you help me?' }
@@ -282,7 +339,11 @@ app.get('/api/test-connection', async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`Health check available at http://localhost:${PORT}/health`);
-  console.log(`Chat API available at http://localhost:${PORT}/api/chat/completions`);
+  console.log(`Base URL: ${BASE_URL}`);
+  console.log(`Frontend URL (CORS): ${FRONTEND_URL}`);
+  console.log(`Health check available at ${BASE_URL}/health`);
+  console.log(`Chat API available at ${BASE_URL}/api/chat/completions`);
+  console.log(`Test connection available at ${BASE_URL}/api/test-connection`);
   console.log(`Search configured: ${!!searchClient}`);
+  console.log(`JWT validation enabled for tenant: ${AZURE_TENANT_ID}`);
 });
