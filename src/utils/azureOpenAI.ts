@@ -1,7 +1,7 @@
 import type { ChatMessage, StreamingChatResponse, ChatSource } from '../types/chat';
 
 // Backend API configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || window.location.origin;
 
 export async function* streamChatCompletion(
   messages: ChatMessage[],
