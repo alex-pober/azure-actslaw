@@ -12,15 +12,6 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Middleware
-app.use(cors({
-  origin: FRONTEND_URL,
-  credentials: true
-}));
-app.use(express.json());
-
-// Backend API only - no static file serving
-
 // Azure configuration
 const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
 const AZURE_OPENAI_API_KEY = process.env.AZURE_OPENAI_API_KEY;
@@ -37,6 +28,13 @@ const FRONTEND_CLIENT_ID = process.env.FRONTEND_CLIENT_ID;
 // Server configuration
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+// Middleware
+app.use(cors({
+  origin: FRONTEND_URL,
+  credentials: true
+}));
+app.use(express.json());
 
 // Validate configuration
 if (!AZURE_OPENAI_ENDPOINT || !AZURE_OPENAI_API_KEY || !AZURE_OPENAI_DEPLOYMENT_ID) {
