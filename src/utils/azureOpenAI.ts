@@ -1,17 +1,67 @@
+import type { IPublicClientApplication } from '@azure/msal-browser';
 import type { ChatMessage, StreamingChatResponse, ChatSource } from '../types/chat';
 
 // Backend API configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BACKEND_CLIENT_ID = import.meta.env.VITE_BACKEND_CLIENT_ID;
+
+// Get JWT token for API authentication
+async function getAccessToken(msalInstance: IPublicClientApplication): Promise<string | null> {
+  try {
+    const accounts = msalInstance.getAllAccounts();
+    if (accounts.length === 0) {
+      throw new Error('No accounts found');
+    }
+
+    const account = accounts[0];
+    const silentRequest = {
+      scopes: [`${BACKEND_CLIENT_ID}/.default`],
+      account: account,
+    };
+
+    try {
+      const response = await msalInstance.acquireTokenSilent(silentRequest);
+      return response.accessToken;
+    } catch (silentError: unknown) {
+      // If silent acquisition fails due to consent required, try interactive
+      const error = silentError as { errorCode?: string; message?: string };
+      if (error.errorCode === 'consent_required' || 
+          error.errorCode === 'interaction_required' ||
+          error.message?.includes('consent')) {
+        console.log('Consent required, attempting interactive login...');
+        
+        const interactiveRequest = {
+          scopes: [`${BACKEND_CLIENT_ID}/.default`],
+          account: account,
+        };
+        
+        const response = await msalInstance.acquireTokenPopup(interactiveRequest);
+        return response.accessToken;
+      }
+      throw silentError;
+    }
+  } catch (error) {
+    console.error('Failed to acquire token:', error);
+    return null;
+  }
+}
 
 export async function* streamChatCompletion(
   messages: ChatMessage[],
-  caseNumber: string
+  caseNumber: string,
+  msalInstance: IPublicClientApplication
 ): AsyncGenerator<StreamingChatResponse, void, unknown> {
   try {
+    const accessToken = await getAccessToken(msalInstance);
+    if (!accessToken) {
+      throw new Error('Failed to acquire access token');
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
         messages: messages.map(msg => ({
@@ -74,12 +124,13 @@ export async function* streamChatCompletion(
 
 export async function sendMessage(
   messages: ChatMessage[],
-  caseNumber: string
+  caseNumber: string,
+  msalInstance: IPublicClientApplication
 ): Promise<{ content: string; sources: ChatSource[] }> {
   let finalContent = '';
   let finalSources: ChatSource[] = [];
 
-  for await (const response of streamChatCompletion(messages, caseNumber)) {
+  for await (const response of streamChatCompletion(messages, caseNumber, msalInstance)) {
     finalContent = response.content;
     finalSources = response.sources;
     if (response.isComplete) break;
@@ -92,9 +143,18 @@ export async function sendMessage(
 }
 
 // Test connection function
-export async function testConnection(): Promise<boolean> {
+export async function testConnection(msalInstance: IPublicClientApplication): Promise<boolean> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/test-connection`);
+    const accessToken = await getAccessToken(msalInstance);
+    if (!accessToken) {
+      throw new Error('Failed to acquire access token');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/test-connection`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      }
+    });
     const data = await response.json();
     return data.success || false;
   } catch (error) {

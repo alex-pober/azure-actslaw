@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
+import { useMsal } from '@azure/msal-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -21,6 +22,7 @@ import type { ChatMessage, ChatSource } from '@/types/chat';
 export default function CaseChat() {
   const { caseId } = useParams<{ caseId: string }>();
   const navigate = useNavigate();
+  const { instance: msalInstance } = useMsal();
   const { selectedCase, selectCase } = useCaseContext();
   const { bearerToken, isConnected, handleTokenExpired } = useSmartAdvocate();
   
@@ -96,7 +98,8 @@ export default function CaseChat() {
       // Stream the response
       for await (const response of azureOpenAIChat.streamChatCompletion(
         [...messages, userMessage], 
-        selectedCase.caseNumber
+        selectedCase.caseNumber,
+        msalInstance
       )) {
         finalContent = response.content;
         sources = response.sources;

@@ -101,7 +101,7 @@ const jwtMiddleware = jwt({
     jwksRequestsPerMinute: 5,
     jwksUri: `https://login.microsoftonline.com/${AZURE_TENANT_ID}/discovery/v2.0/keys`
   }),
-  audience: `api://${BACKEND_CLIENT_ID}`,
+  audience: [BACKEND_CLIENT_ID, `api://${BACKEND_CLIENT_ID}`],
   issuer: `https://login.microsoftonline.com/${AZURE_TENANT_ID}/v2.0`,
   algorithms: ['RS256']
 });

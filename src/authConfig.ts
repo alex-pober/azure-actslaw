@@ -52,7 +52,7 @@ export const msalConfig: Configuration = {
  * https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-permissions-and-consent#openid-connect-scopes
  */
 export const loginRequest: PopupRequest = {
-    scopes: [],
+    scopes: [`${import.meta.env.VITE_BACKEND_CLIENT_ID}/.default`],
 };
 
 /**
