@@ -3,16 +3,17 @@ import { useParams, useNavigate } from 'react-router';
 import { useMsal } from '@azure/msal-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
-  ArrowLeft, 
-  Send, 
-  MessageSquare, 
-  FileText, 
+import {
+  ArrowLeft,
+  Send,
+  MessageSquare,
+  FileText,
   Loader2,
   User,
   Bot,
   ExternalLink
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { useCaseContext } from '@/contexts/CaseContext';
 import { useSmartAdvocate } from '@/contexts/SmartAdvocateContext';
 import { getCaseById } from '@/utils/smartAdvocateApi';
@@ -25,50 +26,50 @@ export default function CaseChat() {
   const { instance: msalInstance } = useMsal();
   const { selectedCase, selectCase } = useCaseContext();
   const { bearerToken, isConnected, handleTokenExpired } = useSmartAdvocate();
-  
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isStreamingResponse, setIsStreamingResponse] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const [error, setError] = useState<string | null>(null);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Fetch case if not already selected
   useEffect(() => {
-    if (caseId && (!selectedCase || selectedCase.caseID.toString() !== caseId)) {
-      if (!isConnected || !bearerToken) {
-        navigate(`/case/${caseId}`);
-        return;
+    const fetchCaseIfNeeded = async () => {
+      if (caseId && (!selectedCase || selectedCase.caseID.toString() !== caseId)) {
+        if (!isConnected || !bearerToken) {
+          navigate(`/case/${caseId}`);
+          return;
+        }
+
+        setIsLoading(true);
+        try {
+          const caseData = await getCaseById(caseId, {
+            bearerToken,
+            onTokenExpired: handleTokenExpired,
+          });
+          selectCase(caseData);
+        } catch (err) {
+          console.error('Error fetching case:', err);
+          setError('Failed to load case information');
+        } finally {
+          setIsLoading(false);
+        }
       }
-      fetchCase();
-    }
-  }, [caseId, selectedCase, isConnected, bearerToken]);
+    };
+
+    fetchCaseIfNeeded();
+  }, [caseId, selectedCase, isConnected, bearerToken, navigate, handleTokenExpired, selectCase]);
 
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
     scrollToBottom();
   }, [messages, streamingContent]);
 
-  const fetchCase = async () => {
-    if (!caseId || !bearerToken) return;
-    
-    setIsLoading(true);
-    try {
-      const caseData = await getCaseById(caseId, {
-        bearerToken,
-        onTokenExpired: handleTokenExpired,
-      });
-      selectCase(caseData);
-    } catch (err) {
-      console.error('Error fetching case:', err);
-      setError('Failed to load case information');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -97,14 +98,14 @@ export default function CaseChat() {
 
       // Stream the response
       for await (const response of azureOpenAIChat.streamChatCompletion(
-        [...messages, userMessage], 
+        [...messages, userMessage],
         selectedCase.caseNumber,
         msalInstance
       )) {
         finalContent = response.content;
         sources = response.sources;
         setStreamingContent(response.content);
-        
+
         if (response.isComplete) {
           break;
         }
@@ -169,14 +170,14 @@ export default function CaseChat() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4 h-screen flex flex-col">
+    <div className="max-w-7xl mx-auto py-8 px-4 h-screen flex flex-col">
       {/* Header */}
       <div className="mb-6">
         <Button onClick={handleGoBack} variant="outline" className="mb-4">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Case Details
         </Button>
-        
+
         <div className="flex items-center space-x-3">
           <MessageSquare className="h-8 w-8 text-blue-600" />
           <div>
@@ -210,22 +211,28 @@ export default function CaseChat() {
                 key={message.id}
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`max-w-3xl ${message.role === 'user' ? 'order-2' : 'order-1'}`}>
+                <div className={`max-w-3xl w-full ${message.role === 'user' ? 'order-2' : 'order-1'}`}>
                   <div className={`flex items-start space-x-3 ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
                     <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                      message.role === 'user' 
-                        ? 'bg-blue-600 text-white' 
+                      message.role === 'user'
+                        ? 'bg-blue-600 text-white'
                         : 'bg-slate-200 text-slate-600'
                     }`}>
                       {message.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
                     </div>
-                    <div className={`rounded-lg p-3 ${
-                      message.role === 'user' 
-                        ? 'bg-blue-600 text-white' 
+                    <div className={`rounded-lg p-3 break-words overflow-wrap-anywhere ${
+                      message.role === 'user'
+                        ? 'bg-blue-600 text-white'
                         : 'bg-slate-100 text-slate-900'
                     }`}>
-                      <p className="whitespace-pre-wrap">{message.content}</p>
-                      
+                      {message.role === 'user' ? (
+                        <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                      ) : (
+                        <div className="prose prose-sm max-w-none break-words">
+                          <ReactMarkdown>{message.content}</ReactMarkdown>
+                        </div>
+                      )}
+
                       {/* Sources */}
                       {message.sources && message.sources.length > 0 && (
                         <div className="mt-3 pt-3 border-t border-slate-200">
@@ -236,7 +243,7 @@ export default function CaseChat() {
                                 <FileText className="h-3 w-3" />
                                 <span className="truncate">{source.title}</span>
                                 {source.url && (
-                                  <ExternalLink className="h-3 w-3 cursor-pointer" 
+                                  <ExternalLink className="h-3 w-3 cursor-pointer"
                                     onClick={() => window.open(source.url, '_blank')} />
                                 )}
                               </div>
@@ -253,16 +260,16 @@ export default function CaseChat() {
             {/* Streaming Response */}
             {isStreamingResponse && (
               <div className="flex justify-start">
-                <div className="max-w-3xl">
+                <div className="max-w-3xl w-full">
                   <div className="flex items-start space-x-3">
                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center">
                       <Bot className="h-4 w-4" />
                     </div>
-                    <div className="bg-slate-100 text-slate-900 rounded-lg p-3">
-                      <p className="whitespace-pre-wrap">
-                        {streamingContent}
+                    <div className="bg-slate-100 text-slate-900 rounded-lg p-3 break-words overflow-wrap-anywhere">
+                      <div className="prose prose-sm max-w-none break-words">
+                        <ReactMarkdown>{streamingContent}</ReactMarkdown>
                         <span className="inline-block w-2 h-4 bg-slate-400 ml-1 animate-pulse" />
-                      </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -285,14 +292,14 @@ export default function CaseChat() {
               ref={textareaRef}
               value={currentMessage}
               onChange={(e) => setCurrentMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyPress}
               placeholder="Ask me about this case..."
               className="flex-1 resize-none border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               rows={1}
               style={{ minHeight: '40px', maxHeight: '120px' }}
               disabled={isStreamingResponse}
             />
-            <Button 
+            <Button
               onClick={handleSendMessage}
               disabled={!currentMessage.trim() || isStreamingResponse}
               className="px-4"
