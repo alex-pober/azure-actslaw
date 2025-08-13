@@ -3,11 +3,10 @@ import { useParams, useNavigate } from 'react-router';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, Building2, FileText, AlertCircle, Loader2, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Calendar, Building2, FileText, AlertCircle, Loader2, MessageSquare, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { useCaseContext, type CaseInfo } from '@/contexts/CaseContext';
 import { useSmartAdvocate } from '@/contexts/SmartAdvocateContext';
 import { getCaseById, TokenExpiredError } from '@/utils/smartAdvocateApi';
-import DocumentSyncStatus from '@/components/DocumentSyncStatus';
 
 export default function CaseDetails() {
   const { caseId } = useParams<{ caseId: string }>();
@@ -167,9 +166,9 @@ export default function CaseDetails() {
               </div>
             </div>
           </div>
-          
+
           {/* Chat Button */}
-          <Button 
+          <Button
             onClick={() => navigate(`/case/${selectedCase.caseID}/chat`)}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
@@ -178,6 +177,58 @@ export default function CaseDetails() {
           </Button>
         </div>
       </div>
+
+      {/* SmartAdvocate Sync Status */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <span>SmartAdvocate Sync Status</span>
+            <Badge variant="outline" className="bg-blue-50 text-blue-700">
+              73% Complete
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="bg-blue-600 h-2 rounded-full" style={{ width: '73%' }}></div>
+            </div>
+            
+            {/* File Categories */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <div>
+                  <div className="font-medium text-green-900">Documents</div>
+                  <div className="text-sm text-green-700">42/45 synced</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg">
+                <Clock className="h-5 w-5 text-yellow-600" />
+                <div>
+                  <div className="font-medium text-yellow-900">Medical Records</div>
+                  <div className="text-sm text-yellow-700">18/32 synced</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-3 p-3 bg-red-50 rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                <div>
+                  <div className="font-medium text-red-900">Photos/Media</div>
+                  <div className="text-sm text-red-700">3/15 synced</div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Last Sync Info */}
+            <div className="text-sm text-slate-500 border-t pt-3">
+              Last sync: 2 hours ago • Next sync in 4 hours
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Additional Details */}
       {selectedCase.incident.mergedFacts && (
@@ -191,8 +242,6 @@ export default function CaseDetails() {
         </Card>
       )}
 
-      {/* Document Sync Status */}
-      <DocumentSyncStatus caseId={selectedCase.caseID.toString()} caseNumber={selectedCase.caseNumber} />
     </div>
   );
 }
