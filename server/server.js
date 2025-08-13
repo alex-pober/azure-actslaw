@@ -140,7 +140,7 @@ async function queryAISearchForSources(query) {
   try {
     // Simple search - let the index do its job
     const searchOptions = {
-      top: 50,
+      top: 15,
       searchMode: "any"
     };
 
@@ -201,7 +201,7 @@ If the sources don't contain relevant information, say so clearly and provide ge
   const response = await openaiClient.chat.completions.create({
     model: AZURE_OPENAI_DEPLOYMENT_ID,
     messages: formattedMessages,
-    max_tokens: 400000,
+    max_tokens: 4000,
     temperature: 0.3,
     stream: true
   });
