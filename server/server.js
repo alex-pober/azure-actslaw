@@ -199,7 +199,6 @@ async function queryOpenAIForResponse(messages, sources, caseNumber) {
     sources.length > 0
       ? sources
           .map((source, index) => {
-            console.log(source)
             const doc = source.document;
 
             // Only keep what's useful for grounding
@@ -314,28 +313,35 @@ app.post(
 
       let content = "";
 
+      // Send sources once at the beginning
+      res.write(
+        `data: ${JSON.stringify({
+          type: "sources",
+          sources: finalSources,
+        })}\n\n`
+      );
+
       for await (const chunk of openaiResponse) {
         const choice = chunk.choices[0];
 
         if (choice?.delta?.content) {
           content += choice.delta.content;
 
-          // Send streaming response
+          // Send only content chunks during streaming
           res.write(
             `data: ${JSON.stringify({
-              content,
-              sources: finalSources,
+              type: "content",
+              content: choice.delta.content,
               isComplete: false,
             })}\n\n`
           );
         }
       }
 
-      // Send final response
+      // Send completion signal
       res.write(
         `data: ${JSON.stringify({
-          content,
-          sources: finalSources,
+          type: "complete",
           isComplete: true,
         })}\n\n`
       );

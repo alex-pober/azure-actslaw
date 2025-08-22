@@ -83,6 +83,8 @@ export async function* streamChatCompletion(
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
+    let accumulatedContent = '';
+    let sources: ChatSource[] = [];
 
     try {
       while (true) {
@@ -97,13 +99,22 @@ export async function* streamChatCompletion(
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
-              yield {
-                content: data.content,
-                sources: data.sources || [],
-                isComplete: data.isComplete || false
-              };
-
-              if (data.isComplete) {
+              
+              if (data.type === 'sources') {
+                sources = data.sources || [];
+              } else if (data.type === 'content') {
+                accumulatedContent += data.content;
+                yield {
+                  content: accumulatedContent,
+                  sources,
+                  isComplete: false
+                };
+              } else if (data.type === 'complete') {
+                yield {
+                  content: accumulatedContent,
+                  sources,
+                  isComplete: true
+                };
                 return;
               }
             } catch {
