@@ -101,7 +101,11 @@ export async function* streamChatCompletion(
               const data = JSON.parse(line.slice(6));
               
               if (data.type === 'sources') {
-                sources = data.sources || [];
+                if (data.isFirstChunk) {
+                  sources = data.sources || [];
+                } else {
+                  sources = [...sources, ...(data.sources || [])];
+                }
               } else if (data.type === 'content') {
                 accumulatedContent += data.content;
                 yield {

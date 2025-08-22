@@ -313,13 +313,31 @@ app.post(
 
       let content = "";
 
-      // Send sources once at the beginning
-      res.write(
-        `data: ${JSON.stringify({
-          type: "sources",
-          sources: finalSources,
-        })}\n\n`
-      );
+      // Send sources in chunks to avoid large SSE messages
+      const CHUNK_SIZE = 5; // Send 5 sources per chunk
+      for (let i = 0; i < finalSources.length; i += CHUNK_SIZE) {
+        const chunk = finalSources.slice(i, i + CHUNK_SIZE);
+        res.write(
+          `data: ${JSON.stringify({
+            type: "sources",
+            sources: chunk,
+            isFirstChunk: i === 0,
+            isLastChunk: i + CHUNK_SIZE >= finalSources.length,
+          })}\n\n`
+        );
+      }
+      
+      // Send empty sources chunk if no sources found
+      if (finalSources.length === 0) {
+        res.write(
+          `data: ${JSON.stringify({
+            type: "sources",
+            sources: [],
+            isFirstChunk: true,
+            isLastChunk: true,
+          })}\n\n`
+        );
+      }
 
       for await (const chunk of openaiResponse) {
         const choice = chunk.choices[0];
